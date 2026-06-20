@@ -89,6 +89,18 @@ Conversions
 - `ToUnix() int64`, `Format(layout string) string`, `ToGoString() string`
   (RFC3339).
 
+Time zones (the IANA tz database is embedded via `_ "time/tzdata"`, so zone
+lookups work on every architecture and inside toolchain-less CI containers
+without a system tzdata install)
+
+- `In(name string) Result.Interface` — a `Result` whose payload is a new `Time`
+  denoting the **same instant** in the IANA location `name` (e.g.
+  `"Europe/Paris"`), or an `Error.New(...)` when `name` is an unknown zone.
+  Because only the location changes, `Before`/`After`/`Equal` are preserved.
+- `Zone() string` — the zone abbreviation in effect at the instant (e.g.
+  `"UTC"`, `"CET"`).
+- `UTC() Interface` — the same instant with its location set to UTC.
+
 Comparisons (each returns `bool`)
 
 - `Before(other)` / `After(other)` / `Equal(other)`.

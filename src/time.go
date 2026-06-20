@@ -2,6 +2,10 @@ package Time
 
 import (
 	"time"
+	// Embedding the IANA time-zone database makes time.LoadLocation work on
+	// every architecture and inside the toolchain-less CI containers, without
+	// relying on a system tzdata install — keeping In() deterministic.
+	_ "time/tzdata"
 
 	Error "github.com/go-composites/error/src"
 	Result "github.com/go-composites/result/src"
@@ -25,6 +29,9 @@ type Interface interface {
 	ToUnix() int64
 	Format(layout string) string
 	ToGoString() string
+	In(name string) Result.Interface
+	Zone() string
+	UTC() Interface
 	Before(Interface) bool
 	After(Interface) bool
 	Equal(Interface) bool
@@ -102,6 +109,50 @@ func (d data) ToGoString() string {
 }
 
 /*
+In returns a Result whose payload is a new Time denoting the SAME instant in
+the IANA location name (e.g. "Europe/Paris").
+
+On success the Result carries the relocated Time; when name is not a known zone
+the Result carries an Error instead — the operation never panics and never
+returns nil. Because only the location changes, the underlying instant (and so
+Before/After/Equal) is preserved.
+
+	r := Time.FromUnix(0).In("Europe/Paris")
+	if r.HasError() {
+	    // r.Error().Message()
+	}
+*/
+func (d data) In(name string) Result.Interface {
+	location, err := time.LoadLocation(name)
+	if err != nil {
+		return Result.New(
+			Result.WithError(
+				Error.New(err.Error()),
+			),
+		)
+	}
+	return Result.New(
+		Result.WithPayload(fromGo(d.value.In(location))),
+	)
+}
+
+/*
+Zone returns the abbreviated name of the time zone in effect at the instant
+(e.g. "UTC", "CET").
+*/
+func (d data) Zone() string {
+	name, _ := d.value.Zone()
+	return name
+}
+
+/*
+UTC returns a new Time denoting the same instant with its location set to UTC.
+*/
+func (d data) UTC() Interface {
+	return fromGo(d.value.UTC())
+}
+
+/*
 Before reports whether the receiver is strictly before other.
 */
 func (d data) Before(other Interface) bool {
@@ -173,6 +224,22 @@ func (n null) Format(string) string {
 
 func (n null) ToGoString() string {
 	return `<NullTime>`
+}
+
+func (n null) In(string) Result.Interface {
+	return Result.New(
+		Result.WithError(
+			Error.New(`cannot relocate a null Time`),
+		),
+	)
+}
+
+func (n null) Zone() string {
+	return ``
+}
+
+func (n null) UTC() Interface {
+	return Null()
 }
 
 func (n null) Before(Interface) bool {

@@ -42,6 +42,35 @@ var _ = ginkgo.Describe("Time", func() {
 		})
 	})
 
+	ginkgo.Describe("time zones", func() {
+		ginkgo.It("relocates an instant into a known IANA zone", func() {
+			r := Time.FromUnix(0).In("Europe/Paris")
+			gomega.Expect(r.HasError()).To(gomega.BeFalse())
+			relocated := r.Payload().(Time.Interface)
+			gomega.Expect(relocated.Zone()).To(gomega.Equal("CET"))
+		})
+		ginkgo.It("returns a Result carrying an error on an unknown zone", func() {
+			r := Time.FromUnix(0).In("Mars/Olympus_Mons")
+			gomega.Expect(r.HasError()).To(gomega.BeTrue())
+			gomega.Expect(r.Error().Message()).NotTo(gomega.BeEmpty())
+		})
+		ginkgo.It("reports the zone abbreviation of a UTC instant", func() {
+			gomega.Expect(Time.FromUnix(0).Zone()).To(gomega.Equal("UTC"))
+		})
+		ginkgo.It("UTC sets the location to UTC", func() {
+			r := Time.FromUnix(0).In("Europe/Paris")
+			relocated := r.Payload().(Time.Interface)
+			gomega.Expect(relocated.UTC().Zone()).To(gomega.Equal("UTC"))
+		})
+		ginkgo.It("preserves the instant across In and UTC (equality is unchanged)", func() {
+			epoch := Time.FromUnix(0)
+			paris := epoch.In("Europe/Paris").Payload().(Time.Interface)
+			gomega.Expect(epoch.Equal(paris)).To(gomega.BeTrue())
+			gomega.Expect(paris.Equal(epoch)).To(gomega.BeTrue())
+			gomega.Expect(epoch.Equal(paris.UTC())).To(gomega.BeTrue())
+		})
+	})
+
 	ginkgo.Describe("comparisons", func() {
 		var early = Time.FromUnix(0)
 		var late = Time.FromUnix(100)
@@ -99,6 +128,17 @@ var _ = ginkgo.Describe("Time", func() {
 		ginkgo.It("Equal is true only against another null", func() {
 			gomega.Expect(n.Equal(Time.Null())).To(gomega.BeTrue())
 			gomega.Expect(n.Equal(Time.FromUnix(0))).To(gomega.BeFalse())
+		})
+		ginkgo.It("In returns a Result carrying an error", func() {
+			r := n.In("Europe/Paris")
+			gomega.Expect(r.HasError()).To(gomega.BeTrue())
+			gomega.Expect(r.Error().Message()).NotTo(gomega.BeEmpty())
+		})
+		ginkgo.It("Zone is the empty string", func() {
+			gomega.Expect(n.Zone()).To(gomega.Equal(``))
+		})
+		ginkgo.It("UTC returns a null Time", func() {
+			gomega.Expect(n.UTC().IsNull()).To(gomega.BeTrue())
 		})
 		ginkgo.It("Add returns a Result whose payload is a null Time", func() {
 			r := n.Add(Duration.FromSeconds(60))
