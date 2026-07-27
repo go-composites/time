@@ -10,6 +10,8 @@ import (
 	Error "github.com/go-composites/error/src"
 	Result "github.com/go-composites/result/src"
 	Duration "github.com/go-composites/time/src/duration"
+
+	dates "github.com/go-datetime/dates"
 )
 
 /*
@@ -75,6 +77,33 @@ panics and never returns nil.
 */
 func Parse(layout, value string) Result.Interface {
 	parsed, err := time.Parse(layout, value)
+	if err != nil {
+		return Result.New(
+			Result.WithError(
+				Error.New(err.Error()),
+			),
+		)
+	}
+	return Result.New(
+		Result.WithPayload(fromGo(parsed)),
+	)
+}
+
+/*
+ParseAny builds a Time from a date/time string WITHOUT an explicit layout,
+trying the real-world format zoo — RFC 822/1123/2822/3339/5322, asctime, HTTP,
+2-digit years, ISO 8601 and named-zone abbreviations — via the shared
+go-datetime/dates parser. This is the lenient, MRI-style Time.parse behaviour
+(Ruby's Time.parse accepts almost any recognisable date), so consumers such as
+the rbgo interpreter delegate here instead of reimplementing a layout table.
+
+On success the Result carries the Time; an unrecognisable value carries an
+Error; the operation never panics and never returns nil.
+
+	r := Time.ParseAny("Tue, 07 Jul 26 11:13:37 UTC") // 2-digit year + named zone
+*/
+func ParseAny(value string) Result.Interface {
+	parsed, err := dates.Parse(value)
 	if err != nil {
 		return Result.New(
 			Result.WithError(

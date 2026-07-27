@@ -31,6 +31,20 @@ var _ = ginkgo.Describe("Time", func() {
 				gomega.Expect(r.Error().Message()).NotTo(gomega.BeEmpty())
 			})
 		})
+
+		ginkgo.Describe("ParseAny", func() {
+			ginkgo.It("parses layout-free real-world dates (2-digit year + named zone)", func() {
+				r := Time.ParseAny("Tue, 07 Jul 26 11:13:37 UTC")
+				gomega.Expect(r.HasError()).To(gomega.BeFalse())
+				got := r.Payload().(Time.Interface)
+				gomega.Expect(got.Format("2006-01-02")).To(gomega.Equal("2026-07-07"))
+			})
+			ginkgo.It("returns a Result carrying an error on an unrecognisable value", func() {
+				r := Time.ParseAny("not-a-time")
+				gomega.Expect(r.HasError()).To(gomega.BeTrue())
+				gomega.Expect(r.Error().Message()).NotTo(gomega.BeEmpty())
+			})
+		})
 	})
 
 	ginkgo.Describe("conversions", func() {
