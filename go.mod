@@ -7,7 +7,7 @@ require (
 	github.com/go-composites/result v0.0.0-20260920235032-53e0a08ef62b
 	github.com/go-datetime/dates v0.1.0
 	github.com/onsi/ginkgo/v2 v2.33.0
-	github.com/onsi/gomega v1.43.1
+	github.com/onsi/gomega v1.44.0
 )
 
 require (
